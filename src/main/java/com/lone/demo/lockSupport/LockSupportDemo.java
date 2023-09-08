@@ -9,10 +9,57 @@ import java.util.concurrent.locks.ReentrantLock;
 
 @Slf4j
 public class LockSupportDemo {
+    private static Thread t1;
+    private static Thread t2;
+    private static Thread t3;
+
     public static void main(String[] args) throws InterruptedException {
         //syncWaitNotify();
         //syncAwaitSignal();
-        syncParkUnpark();
+        //syncParkUnpark();
+        //syncMultiThread();
+        syncMultiThread2();
+
+    }
+
+    private static void syncMultiThread2() {
+        ParkUnpark pu = new ParkUnpark(5);
+
+        t1 = new Thread(() -> {
+            pu.print("a", t2);
+        });
+        t2 = new Thread(() -> {
+            pu.print("b", t3);
+        });
+        t3 = new Thread(() -> {
+            pu.print("c", t1);
+        });
+        t1.start();
+        t2.start();
+        t3.start();
+
+        LockSupport.unpark(t1);
+    }
+
+    private static void syncMultiThread() {
+        Thread t1 = new Thread(() -> {
+            LockSupport.park();
+            log.info("3");
+        }, "t1");
+        t1.start();
+
+        Thread t2 = new Thread(() -> {
+            LockSupport.park();
+            log.info("2");
+            LockSupport.unpark(t1);
+        }, "t1");
+        t2.start();
+
+        Thread t3 = new Thread(() -> {
+            log.info("1");
+            LockSupport.unpark(t2);
+        }, "t1");
+        t3.start();
     }
 
     private static void syncParkUnpark() throws InterruptedException {
@@ -92,4 +139,22 @@ public class LockSupportDemo {
             }
         }, "t2").start();
     }
+}
+
+class ParkUnpark {
+
+    private int loopNumber;
+
+    public ParkUnpark(int loopNumber) {
+        this.loopNumber = loopNumber;
+    }
+
+    public void print(String str, Thread next) {
+        for (int i = 0; i < loopNumber; i++) {
+            LockSupport.park();
+            System.out.print(str);
+            LockSupport.unpark(next);
+        }
+    }
+
 }
